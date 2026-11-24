@@ -35,7 +35,7 @@ export const EvidenceList = () => {
     const q = search.trim().toLowerCase()
     if (!q) return state.items
     return state.items.filter((e) =>
-      `${e.id} ${e.filename} ${e.case_id}`.toLowerCase().includes(q),
+      `${e.id} ${e.display_id ?? ''} ${e.filename} ${e.case_id} ${e.case_display_id ?? ''}`.toLowerCase().includes(q),
     )
   }, [state.items, search])
 

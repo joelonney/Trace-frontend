@@ -22,6 +22,7 @@ import { EvidenceTable } from '../../components/evidence/EvidenceTable'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { formatDate, formatDateTime } from '../../utils/formatters'
 import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
 
 const LOADING = { status: 'loading', data: null }
 
@@ -156,7 +157,7 @@ export const CaseDetails = () => {
         data: { caseItem, evidenceItems, reports, custodyEvents: custodyLists.flat() },
       }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error', data: null }
+      return { status: statusOf(err), message: err.message, data: null }
     }
   }, [caseId])
 
@@ -201,8 +202,12 @@ export const CaseDetails = () => {
     return <AccessDenied message="You are not assigned to this case." />
   }
 
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Case', caseId)} could not be found, or you do not have access to it.`} />
+  }
+
   if (state.status === 'error' || !state.data) {
-    return <EmptyState message={`Case ${caseId} could not be found.`} />
+    return <EmptyState message={`Could not load this case${state.message ? `: ${state.message}` : '.'}`} />
   }
 
   const { caseItem, evidenceItems, reports, custodyEvents } = state.data
@@ -219,7 +224,7 @@ export const CaseDetails = () => {
 
       <PageHeader
         title={caseItem.title}
-        description={`${caseItem.id} · ${caseItem.type}`}
+        description={`${codeOf(caseItem)} · ${caseItem.type}`}
         action={
           <div className="flex items-center gap-2">
             <StatusBadge value={caseItem.status} />

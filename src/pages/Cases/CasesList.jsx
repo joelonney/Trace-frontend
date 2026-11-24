@@ -11,6 +11,9 @@ import { PageHeader } from '../../components/common/PageHeader'
 import { Card } from '../../components/common/Card'
 import { CaseFilters } from '../../components/cases/CaseFilters'
 import { CaseTable } from '../../components/cases/CaseTable'
+import { useMock } from '../../api/mode'
+import { codeOf } from '../../utils/ids'
+import { errorMessage } from '../../utils/errors'
 
 const EMPTY_FILTERS = { search: '', status: '', type: '', priority: '', investigator: '' }
 
@@ -28,7 +31,7 @@ const NewCaseForm = ({ onCancel, onCreated }) => {
     try {
       onCreated(await createCase(form))
     } catch (err) {
-      setError(err.message)
+      setError(errorMessage(err))
       setSaving(false)
     }
   }
@@ -94,7 +97,7 @@ export const CasesList = () => {
     const search = filters.search.trim().toLowerCase()
     return cases.filter((c) => {
       if (search) {
-        const haystack = `${c.id} ${c.title} ${c.investigator}`.toLowerCase()
+        const haystack = `${c.id} ${c.display_id ?? ''} ${c.title} ${c.investigator}`.toLowerCase()
         if (!haystack.includes(search)) return false
       }
       if (filters.status && c.status !== filters.status) return false
@@ -123,13 +126,17 @@ export const CasesList = () => {
           <Alert variant="success">{notice}</Alert>
         </div>
       )}
-      <Modal title="Create case (mock)" isOpen={isNewOpen} onClose={() => setIsNewOpen(false)}>
+      <Modal title={useMock ? 'Create case (mock)' : 'Create case'} isOpen={isNewOpen} onClose={() => setIsNewOpen(false)}>
         {isNewOpen && (
           <NewCaseForm
             onCancel={() => setIsNewOpen(false)}
             onCreated={(created) => {
               setIsNewOpen(false)
-              setNotice(`Case ${created.id} created in the mock environment (lost on reload).`)
+              setNotice(
+                useMock
+                  ? `Case ${codeOf(created)} created in the mock environment (lost on reload).`
+                  : `Case ${codeOf(created)} created.`,
+              )
               getCases().then(setCases)
             }}
           />

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
+import { isUuid } from '../../utils/ids'
 
 const LABELS = {
   dashboard: 'Dashboard',
@@ -8,8 +9,18 @@ const LABELS = {
   custody: 'Chain of Custody',
   verification: 'Verification',
   reports: 'Reports',
+  transfers: 'Transfers',
   users: 'User Management',
   audit: 'Audit Log',
+}
+
+// Detail pages put the record's id in the URL. In API mode that id is a UUID, which means nothing
+// to a person, so show a plain label instead (the page header carries the readable code).
+const DETAIL_LABELS = {
+  cases: 'Case details',
+  evidence: 'Evidence details',
+  custody: 'Custody chain',
+  verification: 'Verification result',
 }
 
 export const Breadcrumbs = () => {
@@ -20,7 +31,9 @@ export const Breadcrumbs = () => {
 
   const crumbs = segments.map((segment, index) => {
     const href = `/${segments.slice(0, index + 1).join('/')}`
-    const label = LABELS[segment] ?? decodeURIComponent(segment)
+    const decoded = decodeURIComponent(segment)
+    const label =
+      LABELS[segment] ?? (isUuid(decoded) ? (DETAIL_LABELS[segments[index - 1]] ?? 'Details') : decoded)
     const isLast = index === segments.length - 1
     return { href, label, isLast }
   })

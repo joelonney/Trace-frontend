@@ -3,12 +3,13 @@ import { Table } from '../common/Table'
 import { StatusBadge } from '../common/StatusBadge'
 import { formatDate } from '../../utils/formatters'
 import { useUserDirectory } from '../../hooks/useUserDirectory'
+import { codeOf, caseCodeOf } from '../../utils/ids'
 
 const buildColumns = (nameOf) => [
-  { key: 'id', header: 'Evidence ID', nowrap: true, mono: true },
+  { key: 'id', header: 'Evidence ID', nowrap: true, mono: true, render: (row) => codeOf(row) },
   { key: 'filename', header: 'Filename' },
   { key: 'file_type', header: 'Type', nowrap: true },
-  { key: 'case_id', header: 'Case', nowrap: true, mono: true },
+  { key: 'case_id', header: 'Case', nowrap: true, mono: true, render: (row) => caseCodeOf(row) },
   {
     key: 'current_custodian',
     header: 'Current Custodian',

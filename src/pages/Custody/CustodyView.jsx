@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/common/EmptyState'
 import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
 
 const LOADING = { status: 'loading', evidenceItem: null, events: [] }
 
@@ -23,7 +24,7 @@ export const CustodyView = () => {
       const events = await getCustodyEvents(evidenceId)
       return { status: 'ready', evidenceItem, events }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error', evidenceItem: null, events: [] }
+      return { status: statusOf(err), message: err.message, evidenceItem: null, events: [] }
     }
   }, [evidenceId])
   const { state } = useAsyncState(load, LOADING)
@@ -36,8 +37,12 @@ export const CustodyView = () => {
     return <AccessDenied message="You are not authorized to access this evidence item." />
   }
 
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Evidence', evidenceId)} could not be found, or you do not have access to it.`} />
+  }
+
   if (state.status === 'error' || !state.evidenceItem) {
-    return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+    return <EmptyState message={`Could not load the chain of custody${state.message ? `: ${state.message}` : '.'}`} />
   }
 
   return (
@@ -51,7 +56,7 @@ export const CustodyView = () => {
 
       <PageHeader
         title="Chain of Custody"
-        description={`${state.evidenceItem.filename} · ${state.evidenceItem.id}`}
+        description={`${state.evidenceItem.filename} · ${codeOf(state.evidenceItem)}`}
       />
 
       <Card>

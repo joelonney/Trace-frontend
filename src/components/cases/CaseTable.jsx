@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom'
 import { Table } from '../common/Table'
 import { StatusBadge } from '../common/StatusBadge'
 import { formatDate } from '../../utils/formatters'
+import { codeOf } from '../../utils/ids'
 
 const COLUMNS = [
-  { key: 'id', header: 'Case ID', nowrap: true, mono: true },
+  { key: 'id', header: 'Case ID', nowrap: true, mono: true, render: (row) => codeOf(row) },
   { key: 'title', header: 'Title' },
   { key: 'type', header: 'Type', nowrap: true },
   { key: 'status', header: 'Status', nowrap: true, render: (row) => <StatusBadge value={row.status} /> },

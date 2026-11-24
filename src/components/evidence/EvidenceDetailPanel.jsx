@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { StatusBadge } from '../common/StatusBadge'
 import { formatDateTime, formatFileSize } from '../../utils/formatters'
 import { useUserDirectory } from '../../hooks/useUserDirectory'
+import { codeOf, caseCodeOf } from '../../utils/ids'
 
 const Field = ({ label, children, mono = false }) => (
   <div>
@@ -24,7 +25,7 @@ export const EvidenceDetailPanel = ({ evidenceItem, relatedCase }) => {
 
   return (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <Field label="Evidence ID">{evidenceItem.id}</Field>
+      <Field label="Evidence ID">{codeOf(evidenceItem)}</Field>
       <Field label="Integrity Status">
         <StatusBadge value={evidenceItem.status} />
       </Field>
@@ -34,7 +35,7 @@ export const EvidenceDetailPanel = ({ evidenceItem, relatedCase }) => {
 
       <Field label="Case">
         <Link to={`/cases/${evidenceItem.case_id}`} className="text-ink-900 hover:underline">
-          {evidenceItem.case_id}
+          {relatedCase ? codeOf(relatedCase) : caseCodeOf(evidenceItem)}
           {relatedCase ? ` — ${relatedCase.title}` : ''}
         </Link>
       </Field>

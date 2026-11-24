@@ -14,6 +14,7 @@ import { formatDateTime } from '../../utils/formatters'
 import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
 import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
 
 const LOADING = { status: 'loading' }
 
@@ -54,7 +55,7 @@ export const VerificationView = () => {
       const record = await getVerification(evidenceId)
       return { status: 'ready', evidenceItem, record }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error' }
+      return { status: statusOf(err), message: err.message }
     }
   }, [evidenceId])
   const { state, setState } = useAsyncState(load, LOADING)
@@ -75,7 +76,12 @@ export const VerificationView = () => {
 
   if (state.status === 'loading') return <LoadingState label="Loading verification…" />
   if (state.status === 'denied') return <AccessDenied message="You are not authorized to access this evidence item." />
-  if (state.status === 'error') return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Evidence', evidenceId)} could not be found, or you do not have access to it.`} />
+  }
+  if (state.status === 'error') {
+    return <EmptyState message={`Could not load this verification${state.message ? `: ${state.message}` : '.'}`} />
+  }
 
   const { evidenceItem, record } = state
   const copy = SOURCE_COPY[record.source] ?? SOURCE_COPY.SYNTHETIC_DEMO
@@ -92,7 +98,7 @@ export const VerificationView = () => {
 
       <PageHeader
         title="Integrity Verification"
-        description={`${evidenceItem.filename} · ${evidenceItem.id}`}
+        description={`${evidenceItem.filename} · ${codeOf(evidenceItem)}`}
         action={
           canRun && (
             <div className="flex gap-2">

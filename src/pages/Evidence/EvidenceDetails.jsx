@@ -18,6 +18,7 @@ import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
 import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
 
 const LOADING = { status: 'loading' }
 
@@ -99,7 +100,7 @@ export const EvidenceDetails = () => {
       ])
       return { status: 'ready', evidenceItem, custodyEvents, relatedCase, ai }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error' }
+      return { status: statusOf(err), message: err.message }
     }
   }, [evidenceId, user])
   const { state, refresh } = useAsyncState(load, LOADING)
@@ -108,7 +109,12 @@ export const EvidenceDetails = () => {
   if (state.status === 'denied') {
     return <AccessDenied message="You are not authorized to access this evidence item." />
   }
-  if (state.status === 'error') return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Evidence', evidenceId)} could not be found, or you do not have access to it.`} />
+  }
+  if (state.status === 'error') {
+    return <EmptyState message={`Could not load this evidence item${state.message ? `: ${state.message}` : '.'}`} />
+  }
 
   const { evidenceItem, custodyEvents, relatedCase, ai } = state
   const canTransfer = hasPermission(user, P.CUSTODY_TRANSFER)
@@ -124,7 +130,7 @@ export const EvidenceDetails = () => {
 
       <PageHeader
         title={evidenceItem.filename}
-        description={evidenceItem.id}
+        description={codeOf(evidenceItem)}
         action={
           <div className="flex gap-2">
             {canTransfer && (
