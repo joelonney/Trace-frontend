@@ -1,16 +1,16 @@
 export const StatCard = ({ label, value, icon: Icon, tone = 'default' }) => {
   const toneClasses = {
-    default: 'bg-ink-900 text-white',
+    default: 'bg-accent-50 text-accent-600',
     warning: 'bg-status-warningBg text-status-warning',
   }[tone]
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-card px-5 py-4 flex items-center gap-4">
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${toneClasses}`}>
-        <Icon size={20} />
+    <div className="bg-white border border-slate-200 rounded-lg shadow-card px-5 py-4 flex items-center gap-4 transition-shadow hover:shadow-md">
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${toneClasses}`}>
+        <Icon size={21} />
       </span>
       <div>
-        <p className="text-2xl font-semibold text-slate-900 leading-tight">{value}</p>
+        <p className="text-2xl font-semibold text-slate-900 leading-tight tabular-nums">{value}</p>
         <p className="text-xs text-slate-500">{label}</p>
       </div>
     </div>

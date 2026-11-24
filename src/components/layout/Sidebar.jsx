@@ -44,9 +44,9 @@ export const Sidebar = () => {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              `group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-ink-900 text-white'
+                  ? 'bg-ink-900 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`
             }
@@ -56,7 +56,11 @@ export const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
-      <div className="px-5 py-4 border-t border-slate-100 text-[11px] text-slate-400">
+      <div className="flex items-center gap-2 px-5 py-4 border-t border-slate-100 text-[11px] text-slate-500">
+        <span
+          aria-hidden="true"
+          className={`h-2 w-2 shrink-0 rounded-full ${useMock ? 'bg-status-warning' : 'bg-status-success'}`}
+        />
         {useMock ? 'Mock data mode — no live backend' : `API mode: ${API_MODE} — backend integration in progress`}
       </div>
     </aside>

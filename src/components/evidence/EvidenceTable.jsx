@@ -5,17 +5,18 @@ import { formatDate } from '../../utils/formatters'
 import { useUserDirectory } from '../../hooks/useUserDirectory'
 
 const buildColumns = (nameOf) => [
-  { key: 'id', header: 'Evidence ID' },
+  { key: 'id', header: 'Evidence ID', nowrap: true, mono: true },
   { key: 'filename', header: 'Filename' },
-  { key: 'file_type', header: 'Type' },
-  { key: 'case_id', header: 'Case' },
+  { key: 'file_type', header: 'Type', nowrap: true },
+  { key: 'case_id', header: 'Case', nowrap: true, mono: true },
   {
     key: 'current_custodian',
     header: 'Current Custodian',
+    nowrap: true,
     render: (row) => nameOf(row.current_custodian),
   },
-  { key: 'status', header: 'Integrity Status', render: (row) => <StatusBadge value={row.status} /> },
-  { key: 'upload_timestamp', header: 'Upload Date', render: (row) => formatDate(row.upload_timestamp) },
+  { key: 'status', header: 'Integrity Status', nowrap: true, render: (row) => <StatusBadge value={row.status} /> },
+  { key: 'upload_timestamp', header: 'Upload Date', nowrap: true, render: (row) => formatDate(row.upload_timestamp) },
 ]
 
 export const EvidenceTable = ({

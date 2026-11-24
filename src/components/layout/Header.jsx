@@ -4,6 +4,14 @@ import { useAuth } from '../../hooks/useAuth'
 import { ROLE_LABELS } from '../../constants/roles'
 import { Breadcrumbs } from './Breadcrumbs'
 
+const initials = (name = '') =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
+
 export const Header = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -17,9 +25,15 @@ export const Header = () => {
   }
 
   return (
-    <header className="flex items-center justify-between h-16 px-6 border-b border-slate-200 bg-white">
+    <header className="flex items-center justify-between h-16 px-6 border-b border-slate-200 bg-white/90 backdrop-blur">
       <Breadcrumbs />
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-900 text-xs font-semibold tracking-wide text-white"
+        >
+          {initials(user?.name)}
+        </span>
         <div className="text-right leading-tight">
           <p className="text-sm font-medium text-slate-800">{user?.name}</p>
           <p className="text-xs text-slate-500">
@@ -29,7 +43,7 @@ export const Header = () => {
         <button
           onClick={handleLogout}
           aria-label="Log out"
-          className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+          className="ml-1 flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
         >
           <LogOut size={15} />
           Log out

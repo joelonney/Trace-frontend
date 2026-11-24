@@ -97,5 +97,6 @@ still needs a human pass. Items ticked 2026-11-24 were also verified with an aut
 - [x] Modals: as Officer open any popup (Evidence → "Upload Evidence", Cases → "New case", Evidence detail → "Transfer Custody"). Each popup must close with the X button, with the Escape key, and by clicking the dark area outside it. Try all three.
 - [x] Breadcrumbs: as Admin open `/users` and `/audit`. The trail at the top should read "User Management" and "Audit Log" (not "users" / "audit").
 - [x] Type `/nonexistent` in the address bar (signed in or out) → "Page not found" with a link back to the Dashboard.
-- [ ] Console: press F12 → Console tab, clear it, then click through every sidebar page as one role. There should be no red errors (yellow warnings are OK).
+- [x] Console: press F12 → Console tab, clear it, then click through every sidebar page as one role. There should be no red errors (yellow warnings are OK).
+  Verified 2026-11-24 (automated): all sidebar pages plus the first case, evidence, custody and verification detail page, for all four roles — 26 pages, 0 console errors or warnings.
 - [x] Deactivated account: as Admin deactivate a user you created, log out, try to log in as them → message "This account has been deactivated."

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ShieldHalf, Eye, EyeOff, Loader2, LogIn } from 'lucide-react'
+import { ShieldHalf, Eye, EyeOff, Loader2, LogIn, Link2, Fingerprint, Lock } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Alert } from '../../components/common/Alert'
 
@@ -59,18 +59,29 @@ export const Login = () => {
     }`
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-ink-950">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-ink-950 bg-[radial-gradient(ellipse_at_top_left,rgba(47,156,148,0.22),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(61,90,134,0.28),transparent_55%)]">
       <div className="hidden lg:flex flex-col justify-center gap-5 px-14 text-white">
         <div className="flex items-center gap-3">
-          <ShieldHalf size={40} />
+          <ShieldHalf size={40} className="text-accent-400" />
           <span className="text-3xl font-bold tracking-widest">TRACE</span>
         </div>
         <p className="text-lg text-slate-200 max-w-md">
           A Secure Blockchain-Based Platform for Smart Forensic Evidence Management.
         </p>
-        <p className="text-sm text-slate-400 max-w-md">
-          Tamper-evident chain of custody, integrity verification and role-based access for
-          forensic evidence. This build is a frontend demonstration running on synthetic data —
+        <ul className="space-y-2.5 max-w-md text-sm text-slate-300">
+          {[
+            [Link2, 'Tamper-evident chain of custody'],
+            [Fingerprint, 'SHA-256 integrity verification'],
+            [Lock, 'Role-based access for every case'],
+          ].map(([Icon, label]) => (
+            <li key={label} className="flex items-center gap-2.5">
+              <Icon size={16} className="text-accent-400 shrink-0" />
+              {label}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-slate-400 max-w-md border-t border-white/10 pt-4">
+          This build is a frontend demonstration running on synthetic data —
           the blockchain, backend and AI services are not connected.
         </p>
       </div>

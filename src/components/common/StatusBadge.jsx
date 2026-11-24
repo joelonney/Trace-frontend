@@ -45,7 +45,7 @@ export const StatusBadge = ({ value, tone }) => {
   const resolvedTone = tone ?? TONE_BY_VALUE[value] ?? 'neutral'
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE_CLASSES[resolvedTone]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ring-current/15 ${TONE_CLASSES[resolvedTone]}`}
     >
       {titleCase(value)}
     </span>
