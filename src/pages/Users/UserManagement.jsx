@@ -10,8 +10,12 @@ import { Alert } from '../../components/common/Alert'
 import { Table } from '../../components/common/Table'
 import { StatusBadge } from '../../components/common/StatusBadge'
 import { useAuth } from '../../hooks/useAuth'
+import { useMock } from '../../api/mode'
+import { errorMessage } from '../../utils/errors'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// The mock accepts 8+; the API contract (decision D4) requires 12+ for temporary passwords.
+const MIN_PASSWORD = useMock ? 8 : 12
 const EMPTY_FORM = { name: '', email: '', role: ROLES.OFFICER, organization: ORGANIZATIONS[1], temporaryPassword: '' }
 const inputClass = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-ink-700 focus:outline-none'
 
@@ -28,14 +32,18 @@ const UserForm = ({ initial, isEdit, onSubmit, onCancel }) => {
       return setError('Name, email and organization are required.')
     }
     if (!EMAIL_RE.test(form.email.trim())) return setError('Enter a valid email address.')
-    if (!isEdit && form.temporaryPassword.length < 8) {
-      return setError('Set a temporary demo password of at least 8 characters.')
+    if (!isEdit && form.temporaryPassword.length < MIN_PASSWORD) {
+      return setError(
+        useMock
+          ? `Set a temporary demo password of at least ${MIN_PASSWORD} characters.`
+          : `Set a temporary password of at least ${MIN_PASSWORD} characters.`,
+      )
     }
     setIsSaving(true)
     try {
       await onSubmit(form)
     } catch (err) {
-      setError(err.message ?? 'Request failed.')
+      setError(errorMessage(err))
       setIsSaving(false)
     }
   }
@@ -43,10 +51,16 @@ const UserForm = ({ initial, isEdit, onSubmit, onCancel }) => {
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       {error && <Alert variant="danger">{error}</Alert>}
-      {!isEdit && (
+      {!isEdit && useMock && (
         <Alert variant="warning" title="Demo-only account">
           This creates an in-memory mock user. You must set a temporary password yourself; it is held
           only in browser memory, is not secure, and the account disappears on page reload.
+        </Alert>
+      )}
+      {!isEdit && !useMock && (
+        <Alert variant="info" title="Temporary password">
+          Set a temporary password of at least {MIN_PASSWORD} characters and share it with the user
+          securely. They will be asked to change it after signing in.
         </Alert>
       )}
       <div>
@@ -77,7 +91,7 @@ const UserForm = ({ initial, isEdit, onSubmit, onCancel }) => {
       {!isEdit && (
         <div>
           <label htmlFor="u-pass" className="block text-xs font-medium text-slate-600 mb-1">
-            Temporary demo password
+            {useMock ? 'Temporary demo password' : 'Temporary password'}
           </label>
           <input id="u-pass" type="password" autoComplete="new-password" className={inputClass} value={form.temporaryPassword} onChange={set('temporaryPassword')} />
         </div>
@@ -115,7 +129,12 @@ export const UserManagement = () => {
   const handleSave = async (form) => {
     if (modal.mode === 'create') {
       const created = await createUser(form)
-      setNotice({ variant: 'success', text: `Mock user ${created.name} created (in memory only; resets on reload).` })
+      setNotice({
+        variant: 'success',
+        text: useMock
+          ? `Mock user ${created.name} created (in memory only; resets on reload).`
+          : `User ${created.name} created. They must change the temporary password at first sign-in.`,
+      })
     } else {
       await updateUser(modal.user.id, form)
       setNotice({ variant: 'success', text: `${form.name} updated.` })
@@ -131,7 +150,7 @@ export const UserManagement = () => {
       setNotice({ variant: 'success', text: `${u.name} ${next === USER_STATUS.ACTIVE ? 'activated' : 'deactivated'}.` })
       await load()
     } catch (err) {
-      setNotice({ variant: 'danger', text: err.message })
+      setNotice({ variant: 'danger', text: errorMessage(err) })
     }
   }
 
@@ -163,7 +182,7 @@ export const UserManagement = () => {
     <div>
       <PageHeader
         title="User Management"
-        description="Mock users for the local demonstration. Changes live in memory only."
+        description={useMock ? 'Mock users for the local demonstration. Changes live in memory only.' : 'Manage accounts, roles and status.'}
         action={<Button icon={Plus} onClick={() => setModal({ mode: 'create' })}>Create user</Button>}
       />
 
@@ -196,7 +215,7 @@ export const UserManagement = () => {
         <Table columns={columns} rows={filtered} rowKey="id" isLoading={isLoading} emptyMessage="No users match your filters." />
       </Card>
 
-      <Modal title={modal?.mode === 'edit' ? 'Edit user' : 'Create mock user'} isOpen={Boolean(modal)} onClose={() => setModal(null)}>
+      <Modal title={modal?.mode === 'edit' ? 'Edit user' : useMock ? 'Create mock user' : 'Create user'} isOpen={Boolean(modal)} onClose={() => setModal(null)}>
         {modal && (
           <UserForm
             key={modal.user?.id ?? 'new'}

@@ -100,3 +100,24 @@ still needs a human pass. Items ticked 2026-11-24 were also verified with an aut
 - [x] Console: press F12 → Console tab, clear it, then click through every sidebar page as one role. There should be no red errors (yellow warnings are OK).
   Verified 2026-11-24 (automated): all sidebar pages plus the first case, evidence, custody and verification detail page, for all four roles — 26 pages, 0 console errors or warnings.
 - [x] Deactivated account: as Admin deactivate a user you created, log out, try to log in as them → message "This account has been deactivated."
+
+## 6. API mode (against the contract stub)
+
+Start the stub and point the app at it (see `stub/README.md`): `npm run stub`, then run the frontend
+with `VITE_API_MODE=http` and `VITE_API_BASE_URL=http://localhost:8000/api/v1`. For the transfer
+approval items start the stub with `STUB_TRANSFER_MODE=two-step`. Restart the stub for a clean
+state. Same demo accounts as above.
+
+Verified 2026-11-24 with an automated headless-Chrome run (not yet by hand):
+- [x] Tables, page headers, dashboard and selects show readable codes (`TRC-…`, `EVD-…`), never UUIDs; breadcrumbs read "Case details" / "Evidence details", not a UUID.
+- [x] Reader opening a hidden case or evidence sees "could not be found, or you do not have access to it" (the API returns 404 for hidden records).
+- [x] A backend/network failure on a detail page says "Could not load …: <reason>" instead of "not found".
+- [x] Evidence detail shows "Calculated by backend", the storage reference (MINIO) with "Encrypted at rest", and the ledger state ("Recorded on the mock ledger (not a real blockchain)" / "Pending").
+- [x] Uploading evidence shows "Evidence registered" with the backend-calculated hash and ledger status — no "mock environment" wording.
+- [x] Verification page: before any verification it shows a neutral "Not verified yet" box (not a red mismatch); "Run backend verification" gives "Hashes match (backend)"; ledger-not-recorded gives "Ledger unavailable — integrity not confirmed", never green.
+- [x] Create user: under 12 characters is refused with the 12-character message; server field errors are shown.
+- [x] Reloading any page (including a direct deep link) keeps you signed in; after logout a reload goes to the login page.
+- [x] Two-step transfer: the officer's offer shows "Transfer requested…", the evidence page shows "Custody transfer pending" and hides the Transfer button; custodian is unchanged until accepted.
+- [x] Dashboard tile reads "Pending custody transfers" and opens **Incoming transfers**; Accept changes the custodian, Reject asks for confirmation first and leaves custody unchanged; history shows the request, acceptance and rejection.
+- [x] A Reader has no Transfers link.
+- [ ] Still needs a human look: the visual layout of the Incoming transfers page and the new notices.

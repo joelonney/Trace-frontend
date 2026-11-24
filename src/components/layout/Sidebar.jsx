@@ -4,6 +4,7 @@ import {
   FolderKanban,
   Fingerprint,
   Link2,
+  ArrowRightLeft,
   ShieldCheck,
   FileBarChart2,
   ShieldHalf,
@@ -20,6 +21,8 @@ const NAV_ITEMS = [
   { label: 'Cases', to: '/cases', icon: FolderKanban, permission: P.CASES_VIEW },
   { label: 'Evidence', to: '/evidence', icon: Fingerprint, permission: P.EVIDENCE_VIEW },
   { label: 'Chain of Custody', to: '/custody', icon: Link2, permission: P.CUSTODY_VIEW },
+  // Two-step transfers only exist against the API; mock transfers are immediate.
+  { label: 'Transfers', to: '/transfers', icon: ArrowRightLeft, permission: P.CUSTODY_HOLD, apiOnly: true },
   { label: 'Verification', to: '/verification', icon: ShieldCheck, permission: P.VERIFICATION_VIEW },
   { label: 'Reports', to: '/reports', icon: FileBarChart2, permission: P.REPORTS_VIEW },
   { label: 'User Management', to: '/users', icon: Users, permission: P.USERS_MANAGE },
@@ -39,7 +42,7 @@ export const Sidebar = () => {
         </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.filter((item) => hasPermission(user, item.permission)).map((item) => (
+        {NAV_ITEMS.filter((item) => hasPermission(user, item.permission) && (!item.apiOnly || !useMock)).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

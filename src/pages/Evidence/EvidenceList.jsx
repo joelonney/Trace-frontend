@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { getEvidence } from '../../api/evidence'
 import { getCases } from '../../api/cases'
@@ -10,40 +10,39 @@ import { Alert } from '../../components/common/Alert'
 import { EvidenceTable } from '../../components/evidence/EvidenceTable'
 import { EvidenceUploadForm } from '../../components/evidence/EvidenceUploadForm'
 import { useAuth } from '../../hooks/useAuth'
+import { useAsyncState } from '../../hooks/useAsyncState'
 import { hasPermission, P } from '../../utils/permissions'
+import { useMock } from '../../api/mode'
+import { codeOf } from '../../utils/ids'
+
+const LOADING = { status: 'loading', items: [], cases: [] }
 
 export const EvidenceList = () => {
   const { user } = useAuth()
-  const [evidenceItems, setEvidenceItems] = useState([])
-  const [cases, setCases] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(null)
 
-  const loadEvidence = () => {
-    setIsLoading(true)
-    getEvidence().then((data) => {
-      setEvidenceItems(data)
-      setIsLoading(false)
-    })
-  }
-
-  useEffect(() => {
-    loadEvidence()
-    getCases().then(setCases)
+  const load = useCallback(async () => {
+    try {
+      const [items, cases] = await Promise.all([getEvidence(), getCases()])
+      return { status: 'ready', items, cases }
+    } catch (err) {
+      return { status: 'error', items: [], cases: [], message: err.message }
+    }
   }, [])
+  const { state, setState } = useAsyncState(load, LOADING)
 
   const filteredEvidence = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return evidenceItems
-    return evidenceItems.filter((e) =>
-      `${e.id} ${e.filename} ${e.case_id}`.toLowerCase().includes(q),
+    if (!q) return state.items
+    return state.items.filter((e) =>
+      `${e.id} ${e.display_id ?? ''} ${e.filename} ${e.case_id} ${e.case_display_id ?? ''}`.toLowerCase().includes(q),
     )
-  }, [evidenceItems, search])
+  }, [state.items, search])
 
   const handleUploaded = (newItem) => {
-    setEvidenceItems((prev) => [newItem, ...prev])
+    setState({ ...state, items: [newItem, ...state.items] })
     setIsUploadOpen(false)
     setUploadSuccess(newItem)
   }
@@ -64,12 +63,26 @@ export const EvidenceList = () => {
 
       {uploadSuccess && (
         <div className="mb-4">
-          <Alert variant="success" title="Evidence registered (mock environment)">
-            {uploadSuccess.filename} was registered as {uploadSuccess.id} in the in-memory mock data.
-            Its SHA-256 was calculated locally in your browser; the file was not uploaded, stored or
-            recorded on a blockchain, and this record will be lost on page reload. Integrity status is
-            pending verification.
-          </Alert>
+          {useMock ? (
+            <Alert variant="success" title="Evidence registered (mock environment)">
+              {uploadSuccess.filename} was registered as {codeOf(uploadSuccess)} in the in-memory mock data.
+              Its SHA-256 was calculated locally in your browser; the file was not uploaded, stored or
+              recorded on a blockchain, and this record will be lost on page reload. Integrity status is
+              pending verification.
+            </Alert>
+          ) : (
+            <Alert variant="success" title="Evidence registered">
+              {uploadSuccess.filename} was registered as {codeOf(uploadSuccess)}. Its SHA-256 was
+              calculated by the backend. Ledger recording:{' '}
+              {(uploadSuccess.ledger?.status ?? 'not submitted').toLowerCase().replace('_', ' ')}.
+            </Alert>
+          )}
+        </div>
+      )}
+
+      {state.status === 'error' && (
+        <div className="mb-4">
+          <Alert variant="danger">Could not load evidence: {state.message}</Alert>
         </div>
       )}
 
@@ -84,11 +97,11 @@ export const EvidenceList = () => {
             className="w-full rounded-md border border-slate-300 bg-white pl-8 pr-2.5 py-1.5 text-sm text-slate-700 focus:border-ink-700 focus:outline-none"
           />
         </div>
-        <EvidenceTable evidenceItems={filteredEvidence} isLoading={isLoading} />
+        <EvidenceTable evidenceItems={filteredEvidence} isLoading={state.status === 'loading'} />
       </Card>
 
       <Modal title="Upload Evidence" isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)}>
-        <EvidenceUploadForm cases={cases} onUploaded={handleUploaded} onCancel={() => setIsUploadOpen(false)} />
+        <EvidenceUploadForm cases={state.cases} onUploaded={handleUploaded} onCancel={() => setIsUploadOpen(false)} />
       </Modal>
     </div>
   )

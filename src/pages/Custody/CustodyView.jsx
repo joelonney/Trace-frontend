@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { getEvidenceById } from '../../api/evidence'
@@ -9,29 +9,25 @@ import { LoadingState } from '../../components/common/LoadingState'
 import { EmptyState } from '../../components/common/EmptyState'
 import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
+import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
+
+const LOADING = { status: 'loading', evidenceItem: null, events: [] }
 
 export const CustodyView = () => {
   const { evidenceId } = useParams()
   const navigate = useNavigate()
-  const [state, setState] = useState({ status: 'loading', evidenceItem: null, events: [] })
 
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading', evidenceItem: null, events: [] })
-
-    getEvidenceById(evidenceId)
-      .then(async (evidenceItem) => {
-        const events = await getCustodyEvents(evidenceId)
-        if (!cancelled) setState({ status: 'ready', evidenceItem, events })
-      })
-      .catch((err) => {
-        if (!cancelled) setState({ status: err.status === 403 ? 'denied' : 'error', evidenceItem: null, events: [] })
-      })
-
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    try {
+      const evidenceItem = await getEvidenceById(evidenceId)
+      const events = await getCustodyEvents(evidenceId)
+      return { status: 'ready', evidenceItem, events }
+    } catch (err) {
+      return { status: statusOf(err), message: err.message, evidenceItem: null, events: [] }
     }
   }, [evidenceId])
+  const { state } = useAsyncState(load, LOADING)
 
   if (state.status === 'loading') {
     return <LoadingState label="Loading chain of custody…" />
@@ -41,8 +37,12 @@ export const CustodyView = () => {
     return <AccessDenied message="You are not authorized to access this evidence item." />
   }
 
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Evidence', evidenceId)} could not be found, or you do not have access to it.`} />
+  }
+
   if (state.status === 'error' || !state.evidenceItem) {
-    return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+    return <EmptyState message={`Could not load the chain of custody${state.message ? `: ${state.message}` : '.'}`} />
   }
 
   return (
@@ -56,7 +56,7 @@ export const CustodyView = () => {
 
       <PageHeader
         title="Chain of Custody"
-        description={`${state.evidenceItem.filename} · ${state.evidenceItem.id}`}
+        description={`${state.evidenceItem.filename} · ${codeOf(state.evidenceItem)}`}
       />
 
       <Card>

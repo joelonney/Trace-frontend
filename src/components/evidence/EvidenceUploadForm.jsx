@@ -10,6 +10,9 @@ import {
   MAX_UPLOAD_BYTES,
 } from '../../api/evidence'
 import { formatFileSize } from '../../utils/formatters'
+import { codeOf } from '../../utils/ids'
+import { errorMessage } from '../../utils/errors'
+import { useMock } from '../../api/mode'
 
 const inputClass =
   'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-ink-700 focus:outline-none'
@@ -57,7 +60,7 @@ export const EvidenceUploadForm = ({ cases, defaultCaseId, onUploaded, onCancel 
       })
       onUploaded(newItem)
     } catch (err) {
-      setError(err.message ?? 'Registration failed.')
+      setError(errorMessage(err, 'Registration failed.'))
     } finally {
       setIsSubmitting(false)
     }
@@ -76,11 +79,19 @@ export const EvidenceUploadForm = ({ cases, defaultCaseId, onUploaded, onCancel 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <Alert variant="info" title="Mock registration — nothing is uploaded">
-        The file stays in your browser. Its SHA-256 is calculated locally and a mock evidence record
-        is created in memory. The file is not encrypted, stored, pinned to IPFS or recorded on a
-        blockchain, and the record is lost on page reload.
-      </Alert>
+      {useMock ? (
+        <Alert variant="info" title="Mock registration — nothing is uploaded">
+          The file stays in your browser. Its SHA-256 is calculated locally and a mock evidence record
+          is created in memory. The file is not encrypted, stored, pinned to IPFS or recorded on a
+          blockchain, and the record is lost on page reload.
+        </Alert>
+      ) : (
+        <Alert variant="info" title="Uploaded to the backend">
+          The file is sent to the backend, which calculates the authoritative SHA-256 and then records
+          it on the ledger. Your browser also hashes the file and sends that value only as a
+          cross-check.
+        </Alert>
+      )}
 
       {error && <Alert variant="danger">{error}</Alert>}
 
@@ -88,7 +99,7 @@ export const EvidenceUploadForm = ({ cases, defaultCaseId, onUploaded, onCancel 
         <label htmlFor="ev-case" className="block text-xs font-medium text-slate-600 mb-1">Case</label>
         <select id="ev-case" value={form.caseId} onChange={handleChange('caseId')} className={inputClass}>
           {cases.map((c) => (
-            <option key={c.id} value={c.id}>{c.id} — {c.title}</option>
+            <option key={c.id} value={c.id}>{codeOf(c)} — {c.title}</option>
           ))}
         </select>
       </div>

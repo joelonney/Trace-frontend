@@ -39,7 +39,7 @@ The data layer is selected once at startup by `VITE_API_MODE` (see `.env.example
 | Mode | What happens | Status |
 |---|---|---|
 | `mock` (default when unset) | In-memory demo data from `src/api/mock/*` + `src/mock/*`. No backend needed. | Working; covered by `npm run check:api` |
-| `http` | Real requests to `VITE_API_BASE_URL` (default `http://localhost:8000/api/v1`) following `docs/API_CONTRACT_V1.md`, mapped to the UI shapes by `src/api/adapters.js`. | **Not yet tested against a live backend.** Request/response mapping is covered by `npm run check:adapters` with a fake `fetch` only. |
+| `http` | Real requests to `VITE_API_BASE_URL` (default `http://localhost:8000/api/v1`) following `docs/API_CONTRACT_V1.md`, mapped to the UI shapes by `src/api/adapters.js`. | **Verified against the contract stub** (`npm run stub`, see `stub/README.md`) in a real browser: login, session restore after reload, cases, evidence upload, custody transfers (immediate and two-step), verification, reports, users and audit. **Not yet tested against the real FastAPI backend** (none is available yet). Also covered by `npm run check:adapters` with a fake `fetch`. |
 
 Pages import only `src/api/<feature>.js`; each of those is a facade that picks the mock or HTTP
 implementation. Shared enums live in `src/constants/`. A typo in `VITE_API_MODE` throws at startup
@@ -128,6 +128,7 @@ src/
 | `/evidence/:evidenceId` | Evidence detail, custody history |
 | `/custody` | Pick an evidence item to view its custody chain |
 | `/custody/:evidenceId` | Chain-of-custody timeline for one evidence item |
+| `/transfers` | Incoming custody transfers to accept or reject (API mode only; custody transfers are two-step against the real backend) |
 | `/verification` | Pick an evidence item to check integrity |
 | `/verification/:evidenceId` | Mocked hash comparison / verification result |
 | `/reports` | Report list, draft creation |

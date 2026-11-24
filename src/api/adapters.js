@@ -138,6 +138,16 @@ export const toReport = (r) => ({
   ai_assisted: Boolean(r.ai_assisted),
 })
 
+// A custody transfer request (two-step: the recipient must accept before custody changes).
+export const toTransfer = (t) => ({
+  id: t.id,
+  evidence_id: t.evidence_id,
+  status: t.status,
+  reason: t.reason ?? '',
+  from_user: toUserRef(t.from_user),
+  to_user: toUserRef(t.to_user),
+  requested_at: t.requested_at ?? null,
+})
 export const toAuditEvent = (a) => ({
   id: a.id,
   timestamp: a.occurred_at ?? null,

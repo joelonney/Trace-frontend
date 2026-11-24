@@ -7,7 +7,7 @@ import { Alert } from '../../components/common/Alert'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const Login = () => {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, isRestoring, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -23,6 +23,9 @@ export const Login = () => {
   const from = location.state?.from
   const afterLogin = from && from !== '/login' ? from : '/dashboard'
 
+  if (isRestoring) {
+    return <div className="min-h-screen bg-ink-950" aria-busy="true" />
+  }
   if (isAuthenticated) {
     return <Navigate to={afterLogin} replace />
   }

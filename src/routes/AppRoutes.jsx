@@ -11,6 +11,7 @@ import { EvidenceList } from '../pages/Evidence/EvidenceList'
 import { EvidenceDetails } from '../pages/Evidence/EvidenceDetails'
 import { CustodyIndex } from '../pages/Custody/CustodyIndex'
 import { CustodyView } from '../pages/Custody/CustodyView'
+import { Transfers } from '../pages/Transfers/Transfers'
 import { VerificationIndex } from '../pages/Verification/VerificationIndex'
 import { VerificationView } from '../pages/Verification/VerificationView'
 import { Reports } from '../pages/Reports/Reports'
@@ -26,6 +27,7 @@ const PAGE_ROUTES = [
   { path: '/evidence/:evidenceId', permission: P.EVIDENCE_VIEW, Page: EvidenceDetails },
   { path: '/custody', permission: P.CUSTODY_VIEW, Page: CustodyIndex },
   { path: '/custody/:evidenceId', permission: P.CUSTODY_VIEW, Page: CustodyView },
+  { path: '/transfers', permission: P.CUSTODY_HOLD, Page: Transfers },
   { path: '/verification', permission: P.VERIFICATION_VIEW, Page: VerificationIndex },
   { path: '/verification/:evidenceId', permission: P.VERIFICATION_VIEW, Page: VerificationView },
   { path: '/reports', permission: P.REPORTS_VIEW, Page: Reports },

@@ -15,6 +15,8 @@ import { StatusBadge } from '../../components/common/StatusBadge'
 import { LoadingState } from '../../components/common/LoadingState'
 import { EmptyState } from '../../components/common/EmptyState'
 import { formatDateTime } from '../../utils/formatters'
+import { codeOf } from '../../utils/ids'
+import { errorMessage } from '../../utils/errors'
 
 const field = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-ink-700 focus:outline-none'
 
@@ -31,7 +33,7 @@ const DraftForm = ({ cases, onCancel, onCreated }) => {
       await createDraftReport(form)
       onCreated()
     } catch (err) {
-      setError(err.message)
+      setError(errorMessage(err))
       setSaving(false)
     }
   }
@@ -43,7 +45,7 @@ const DraftForm = ({ cases, onCancel, onCreated }) => {
         <label htmlFor="r-case" className="block text-xs font-medium text-slate-600 mb-1">Case</label>
         <select id="r-case" className={field} value={form.caseId} onChange={set('caseId')}>
           {cases.map((c) => (
-            <option key={c.id} value={c.id}>{c.id} — {c.title}</option>
+            <option key={c.id} value={c.id}>{codeOf(c)} — {c.title}</option>
           ))}
         </select>
       </div>
@@ -76,11 +78,13 @@ export const Reports = () => {
       setIsLoading(false)
     })
   const canCreate = hasPermission(user, P.REPORTS_CREATE)
+  const caseCode = Object.fromEntries(cases.map((c) => [c.id, codeOf(c)]))
 
   useEffect(() => {
     load()
-    if (canCreate) getCases().then(setCases)
-  }, [canCreate])
+    // Cases are needed to show readable case codes for every role, not just to create drafts.
+    getCases().then(setCases)
+  }, [])
 
   return (
     <div>
@@ -124,7 +128,7 @@ export const Reports = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-800 truncate">{report.title}</p>
                     <p className="text-xs text-slate-500">
-                      {report.case_id} · {report.author} · {formatDateTime(report.generated_at)}
+                      {caseCode[report.case_id] ?? report.case_id} · {report.author} · {formatDateTime(report.generated_at)}
                     </p>
                   </div>
                   <StatusBadge value={report.status} />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, CheckCircle2, XCircle, PlayCircle, FileSearch } from 'lucide-react'
 import { getEvidenceById } from '../../api/evidence'
@@ -13,6 +13,12 @@ import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { formatDateTime } from '../../utils/formatters'
 import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
+import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
+import { errorMessage } from '../../utils/errors'
+import { useMock } from '../../api/mode'
+
+const LOADING = { status: 'loading' }
 
 const SOURCE_COPY = {
   SYNTHETIC_DEMO: {
@@ -33,16 +39,34 @@ const SOURCE_COPY = {
   LOCAL_CALCULATED: {
     variant: 'info',
     title: 'Locally calculated file hash',
-    text: 'The SHA-256 below was calculated in your browser from a file you selected and compared with the hash in the mock record. It is not confirmed by a backend and is not a blockchain verification.',
+    text: `The SHA-256 below was calculated in your browser from a file you selected and compared with the hash in the ${
+      useMock ? 'mock' : 'persisted'
+    } record. It is not confirmed by a backend and is not a blockchain verification.`,
   },
 }
+
+// What the result box says. Only a real MATCH is ever green; "couldn't check" is not a mismatch,
+// and "nothing checked yet" is neither.
+const OUTCOMES = {
+  MATCH: { title: 'Hashes match', tone: 'ok' },
+  MISMATCH: { title: 'Hash mismatch', tone: 'bad' },
+  LEDGER_UNAVAILABLE: { title: 'Ledger unavailable — integrity not confirmed', tone: 'warn' },
+  STORAGE_UNAVAILABLE: { title: 'Storage unavailable — integrity not confirmed', tone: 'warn' },
+  PENDING: { title: 'Verification in progress', tone: 'warn' },
+  NONE: { title: 'Not verified yet', tone: 'warn' },
+}
+const TONE_CLASS = {
+  ok: 'bg-status-successBg text-status-success',
+  bad: 'bg-status-dangerBg text-status-danger',
+  warn: 'bg-status-warningBg text-status-warning',
+}
+const SOURCE_SUFFIX = { SYNTHETIC_DEMO: ' (synthetic)', BACKEND: ' (backend)', LOCAL_CALCULATED: ' (local comparison)' }
 
 export const VerificationView = () => {
   const { evidenceId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
   const fileRef = useRef(null)
-  const [state, setState] = useState({ status: 'loading' })
   const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState(null)
 
@@ -52,27 +76,19 @@ export const VerificationView = () => {
       const record = await getVerification(evidenceId)
       return { status: 'ready', evidenceItem, record }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error' }
+      return { status: statusOf(err), message: err.message }
     }
   }, [evidenceId])
-
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading' })
-    load().then((s) => !cancelled && setState(s))
-    return () => {
-      cancelled = true
-    }
-  }, [load])
+  const { state, setState } = useAsyncState(load, LOADING)
 
   const run = async (file) => {
     setRunError(null)
     setIsRunning(true)
     try {
       const record = await runVerification(evidenceId, file)
-      setState((s) => ({ ...s, record }))
+      setState({ ...state, record })
     } catch (err) {
-      setRunError(err.message)
+      setRunError(errorMessage(err))
     } finally {
       setIsRunning(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -81,11 +97,19 @@ export const VerificationView = () => {
 
   if (state.status === 'loading') return <LoadingState label="Loading verification…" />
   if (state.status === 'denied') return <AccessDenied message="You are not authorized to access this evidence item." />
-  if (state.status === 'error') return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Evidence', evidenceId)} could not be found, or you do not have access to it.`} />
+  }
+  if (state.status === 'error') {
+    return <EmptyState message={`Could not load this verification${state.message ? `: ${state.message}` : '.'}`} />
+  }
 
   const { evidenceItem, record } = state
   const copy = SOURCE_COPY[record.source] ?? SOURCE_COPY.SYNTHETIC_DEMO
   const canRun = hasPermission(user, P.VERIFICATION_RUN)
+  const outcomeKey = record.source === 'NONE' ? 'NONE' : (record.result ?? (record.match ? 'MATCH' : 'MISMATCH'))
+  const outcome = OUTCOMES[outcomeKey] ?? OUTCOMES.NONE
+  const OutcomeIcon = outcome.tone === 'ok' ? CheckCircle2 : outcome.tone === 'bad' ? XCircle : FileSearch
 
   return (
     <div>
@@ -98,12 +122,12 @@ export const VerificationView = () => {
 
       <PageHeader
         title="Integrity Verification"
-        description={`${evidenceItem.filename} · ${evidenceItem.id}`}
+        description={`${evidenceItem.filename} · ${codeOf(evidenceItem)}`}
         action={
           canRun && (
             <div className="flex gap-2">
               <Button variant="secondary" icon={PlayCircle} disabled={isRunning} onClick={() => run(null)}>
-                Run mock verification
+                {useMock ? 'Run mock verification' : 'Run backend verification'}
               </Button>
               <Button icon={FileSearch} disabled={isRunning} onClick={() => fileRef.current?.click()}>
                 Hash a local file…
@@ -117,44 +141,64 @@ export const VerificationView = () => {
       <div className="mb-4 space-y-3">
         <Alert variant={copy.variant} title={copy.title}>{copy.text}</Alert>
         {runError && <Alert variant="danger">{runError}</Alert>}
-        <Alert variant="info" title="Not yet available">
-          Backend-confirmed verification (FastAPI) and blockchain transaction references (Hyperledger
-          Fabric) are not connected. Nothing on this page is a real blockchain confirmation.
-        </Alert>
+        {useMock && (
+          <Alert variant="info" title="Not yet available">
+            Backend-confirmed verification (FastAPI) and blockchain transaction references (Hyperledger
+            Fabric) are not connected. Nothing on this page is a real blockchain confirmation.
+          </Alert>
+        )}
       </div>
 
       <Card>
-        <div
-          className={`flex items-center gap-3 rounded-md px-4 py-3 mb-5 ${
-            record.match ? 'bg-status-successBg text-status-success' : 'bg-status-dangerBg text-status-danger'
-          }`}
-        >
-          {record.match ? <CheckCircle2 size={22} /> : <XCircle size={22} />}
+        <div className={`flex items-center gap-3 rounded-md px-4 py-3 mb-5 ${TONE_CLASS[outcome.tone]}`}>
+          <OutcomeIcon size={22} />
           <div>
             <p className="text-sm font-semibold">
-              {record.match ? 'Hashes match' : 'Hash mismatch'}
-              {record.source === 'SYNTHETIC_DEMO' ? ' (synthetic)' : ' (local comparison)'}
+              {outcome.title}
+              {SOURCE_SUFFIX[record.source] ?? ''}
             </p>
-            <p className="text-xs opacity-80">
-              Checked {formatDateTime(record.checked_at)}
-              {record.checked_by ? ` by ${record.checked_by}` : ''}
-            </p>
+            {record.checked_at && (
+              <p className="text-xs opacity-80">
+                Checked {formatDateTime(record.checked_at)}
+                {record.checked_by ? ` by ${record.checked_by}` : ''}
+              </p>
+            )}
           </div>
         </div>
 
         <dl className="space-y-4 text-sm">
           <div>
             <dt className="text-xs text-slate-500">
-              {record.source === 'LOCAL_CALCULATED' ? `Calculated SHA-256 (local file: ${record.checked_filename})` : 'Current SHA-256 (synthetic)'}
+              {record.source === 'LOCAL_CALCULATED'
+                ? `Calculated SHA-256 (local file: ${record.checked_filename})`
+                : record.source === 'SYNTHETIC_DEMO'
+                  ? 'Current SHA-256 (synthetic)'
+                  : 'Recalculated SHA-256 (backend)'}
             </dt>
-            <dd className="font-mono text-xs text-slate-800 break-all mt-0.5">{record.current_sha256}</dd>
+            <dd className="font-mono text-xs text-slate-800 break-all mt-0.5">
+              {record.current_sha256 ?? '— (not verified yet)'}
+            </dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Recorded SHA-256 (mock record — read-only)</dt>
+            <dt className="text-xs text-slate-500">
+              {useMock ? 'Recorded SHA-256 (mock record — read-only)' : 'Persisted SHA-256 (read-only)'}
+            </dt>
             <dd className="font-mono text-xs text-slate-800 break-all mt-0.5">{record.recorded_sha256}</dd>
           </div>
+          {!useMock && (
+            <div>
+              <dt className="text-xs text-slate-500">Ledger-recorded SHA-256</dt>
+              <dd className="font-mono text-xs text-slate-800 break-all mt-0.5">
+                {record.ledger_sha256 ?? 'None — not recorded on the ledger yet'}
+              </dd>
+            </div>
+          )}
           <div>
-            <dt className="text-xs text-slate-500">Placeholder transaction reference (not a real blockchain transaction)</dt>
+            <dt className="text-xs text-slate-500">
+              {useMock
+                ? 'Placeholder transaction reference (not a real blockchain transaction)'
+                : 'Ledger transaction reference'}
+            </dt>
             <dd className="font-mono text-xs text-slate-800 mt-0.5">
               {record.placeholder_reference ?? 'None — no transaction recorded'}
             </dd>

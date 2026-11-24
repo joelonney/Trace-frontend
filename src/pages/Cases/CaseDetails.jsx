@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
 import { getCaseById, updateCase, registerCaseDocument, removeCaseDocument } from '../../api/cases'
@@ -21,6 +21,11 @@ import { CASE_STATUS, CASE_PRIORITY } from '../../constants/cases'
 import { EvidenceTable } from '../../components/evidence/EvidenceTable'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { formatDate, formatDateTime } from '../../utils/formatters'
+import { useAsyncState } from '../../hooks/useAsyncState'
+import { codeOf, named, statusOf } from '../../utils/ids'
+import { useMock } from '../../api/mode'
+
+const LOADING = { status: 'loading', data: null }
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -136,7 +141,6 @@ export const CaseDetails = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const { user } = useAuth()
-  const [state, setState] = useState({ status: 'loading', data: null })
   const [editOpen, setEditOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
   const [actionError, setActionError] = useState(null)
@@ -154,22 +158,11 @@ export const CaseDetails = () => {
         data: { caseItem, evidenceItems, reports, custodyEvents: custodyLists.flat() },
       }
     } catch (err) {
-      return { status: err.status === 403 ? 'denied' : 'error', data: null }
+      return { status: statusOf(err), message: err.message, data: null }
     }
   }, [caseId])
 
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading', data: null })
-    load().then((s) => {
-      if (!cancelled) setState(s)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [load])
-
-  const refresh = () => load().then(setState)
+  const { state, refresh } = useAsyncState(load, LOADING)
 
   const timelineItems = useMemo(() => {
     if (!state.data) return []
@@ -210,8 +203,12 @@ export const CaseDetails = () => {
     return <AccessDenied message="You are not assigned to this case." />
   }
 
+  if (state.status === 'notfound') {
+    return <EmptyState message={`${named('Case', caseId)} could not be found, or you do not have access to it.`} />
+  }
+
   if (state.status === 'error' || !state.data) {
-    return <EmptyState message={`Case ${caseId} could not be found.`} />
+    return <EmptyState message={`Could not load this case${state.message ? `: ${state.message}` : '.'}`} />
   }
 
   const { caseItem, evidenceItems, reports, custodyEvents } = state.data
@@ -228,7 +225,7 @@ export const CaseDetails = () => {
 
       <PageHeader
         title={caseItem.title}
-        description={`${caseItem.id} · ${caseItem.type}`}
+        description={`${codeOf(caseItem)} · ${caseItem.type}`}
         action={
           <div className="flex items-center gap-2">
             <StatusBadge value={caseItem.status} />
@@ -314,7 +311,7 @@ export const CaseDetails = () => {
                     <p className="text-sm font-medium text-slate-800 truncate">{d.title}</p>
                     <p className="text-xs text-slate-500">
                       {d.added_by} · {formatDateTime(d.added_at)}
-                      {d.note ? ` · ${d.note}` : ''} · metadata only (mock)
+                      {d.note ? ` · ${d.note}` : ''} · {useMock ? 'metadata only (mock)' : 'metadata only'}
                     </p>
                   </div>
                   {hasPermission(user, P.DOCUMENTS_MANAGE) && (
@@ -411,9 +408,9 @@ export const CaseDetails = () => {
       {activeTab === 'overview' && (
         <div className="mt-4">
           <Alert variant="info">
-            Case data shown here is synthetic and served from local mock data. Documents and Reports
-            reflect the mocked evidence/report records above — real report generation is not yet
-            implemented.
+            {useMock
+              ? 'Case data shown here is synthetic and served from local mock data. Documents and Reports reflect the mocked evidence/report records above — real report generation is not yet implemented.'
+              : 'Documents are metadata only (no file contents). Reports are draft records — document generation is not yet implemented.'}
           </Alert>
         </div>
       )}

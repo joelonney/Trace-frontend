@@ -10,6 +10,8 @@ import { StatCard } from '../../components/dashboard/StatCard'
 import { RecentActivityList } from '../../components/dashboard/RecentActivityList'
 import { VerificationSummary } from '../../components/dashboard/VerificationSummary'
 import { formatDate, formatDateTime, titleCase } from '../../utils/formatters'
+import { codeOf, caseCodeOf } from '../../utils/ids'
+import { useMock } from '../../api/mode'
 
 export const Dashboard = () => {
   const [data, setData] = useState(null)
@@ -29,6 +31,8 @@ export const Dashboard = () => {
   const { cases, evidenceItems, pendingRequests, recentEvents } = data
   const activeCases = cases.filter((c) => c.status === 'OPEN' || c.status === 'UNDER_REVIEW')
 
+  const evidenceCode = Object.fromEntries(evidenceItems.map((e) => [e.id, codeOf(e)]))
+
   const recentCases = [...cases]
     .sort((a, b) => new Date(b.opened_date) - new Date(a.opened_date))
     .slice(0, 5)
@@ -36,7 +40,7 @@ export const Dashboard = () => {
       id: c.id,
       to: `/cases/${c.id}`,
       title: c.title,
-      subtitle: `${c.id} · ${titleCase(c.status)}`,
+      subtitle: `${codeOf(c)} · ${titleCase(c.status)}`,
       meta: formatDate(c.opened_date),
     }))
 
@@ -47,7 +51,7 @@ export const Dashboard = () => {
       id: e.id,
       to: `/evidence/${e.id}`,
       title: e.filename,
-      subtitle: `${e.case_id} · ${titleCase(e.status)}`,
+      subtitle: `${caseCodeOf(e)} · ${titleCase(e.status)}`,
       meta: formatDate(e.upload_timestamp),
     }))
 
@@ -55,7 +59,7 @@ export const Dashboard = () => {
     id: event.id,
     to: `/custody/${event.evidence_id}`,
     title: titleCase(event.event_type),
-    subtitle: `${event.actor} · ${event.evidence_id}`,
+    subtitle: `${event.actor} · ${evidenceCode[event.evidence_id] ?? event.evidence_id}`,
     meta: formatDateTime(event.timestamp),
   }))
 
@@ -70,10 +74,11 @@ export const Dashboard = () => {
         <StatCard label="Active Cases" value={activeCases.length} icon={FolderKanban} />
         <StatCard label="Total Evidence Items" value={evidenceItems.length} icon={Fingerprint} />
         <StatCard
-          label="Pending Access Requests"
+          label={useMock ? 'Pending Access Requests' : 'Pending custody transfers'}
           value={pendingRequests.length}
           icon={UserCheck}
           tone={pendingRequests.length > 0 ? 'warning' : 'default'}
+          to={useMock ? undefined : '/transfers'}
         />
         <StatCard
           label="Verified Evidence"
