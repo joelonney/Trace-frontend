@@ -7,7 +7,7 @@ Ranked easiest → hardest. Status key: `[ ]` to do · `[x]` done.
 | 1 | [x] | Check Custody and Reports pages (and every other page) for console errors; tick the last checklist item | 5 min | nothing |
 | 2 | [x] | Add a `Dockerfile` (Node build, then nginx), `.dockerignore`, and an nginx SPA config. **Written, not yet build-tested** (Docker isn't installed on Joe's machine) | 1–2 h | nothing |
 | 3 | [x] | Add `docker-compose.yml` with the frontend service and placeholders for backend and Fabric. **YAML validated, not yet run** | 1 h | #2 |
-| 4 | [ ] | Clone the team's backend repo into `trace-backend/` (next to `trace-frontend/`) and compare its API with `docs/API_CONTRACT_V1.md` | 1–2 h | friends' repo |
+| 4 | [x] | Clone the team's backend repo into `trace-backend/` (next to `trace-frontend/`) and compare its API with `docs/API_CONTRACT_V1.md`. **Done** — see `docs/BACKEND_COMPARISON.md` (backend has chaincode only; no FastAPI code pushed yet) | 1–2 h | friends' repo |
 | 5 | [ ] | Fix the 6 lint warnings by moving data loading into a small `useAsync` hook | 2–3 h | nothing |
 | 6 | [x] | Build the contract stub server (plan step I-2) so `VITE_API_MODE=http` can be tested without the real backend. **Done** — see `stub/README.md`; `npm run stub`, `npm run check:stub` (118 assertions) | 4–6 h | nothing |
 | 7 | [ ] | Fix the UI/contract mismatches found by running the real UI against the stub (list below), plus the new status labels from `docs/INTEGRATION_PLAN.md` §5 | 3–4 h | #6 ✔ |
@@ -38,6 +38,9 @@ wrong or misleading in http mode:
    plan step I-3 wires `/auth/refresh` + `/auth/me` into `AuthContext`).
 6. **Dashboard tile.** "Pending Access Requests" should become "Pending custody transfers"
    (`GET /transfers?status=PENDING&direction=incoming`, decision D5).
+7. **Two-step transfer UI (from `docs/BACKEND_COMPARISON.md`).** The chaincode is offer → accept, so
+   the UI needs a recipient inbox with Accept/Reject, a "transfer pending" state on the evidence page,
+   and the dashboard tile above. Once the team confirms D5, make `two-step` the stub default.
 
 ## Suggested order
 
