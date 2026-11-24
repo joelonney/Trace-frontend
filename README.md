@@ -9,7 +9,7 @@ platform for smart forensic evidence management.
 
 ## Install & Run
 
-Requires Node.js 18+.
+Requires Node.js **20.19+ or 22.12+** (Vite 8).
 
 ```bash
 npm install
@@ -17,8 +17,19 @@ npm run dev       # start the dev server (http://localhost:5173)
 npm run build     # production build to dist/
 npm run preview   # preview the production build locally
 npm run lint      # oxlint static checks
-npm run check     # check:api (mock API layer, 58 assertions) + check:adapters (HTTP adapters, 60)
+npm run check     # check:api (mock API, 58) + check:adapters (HTTP adapters, 60) + check:stub (contract stub, 118)
+npm run stub      # contract stub server on http://127.0.0.1:8000/api/v1 (see stub/README.md)
 ```
+
+### Docker
+
+```bash
+docker compose up --build     # http://localhost:3000 (mock-data mode)
+```
+
+`Dockerfile` (Node build → non-root nginx on port 8080) and `docker-compose.yml` (frontend only;
+backend/Fabric are commented placeholders). **Not yet build-tested** — Docker isn't installed on the
+author's machine. `VITE_*` values are baked in at build time, so pass them as build args.
 
 ### API mode (mock vs HTTP)
 

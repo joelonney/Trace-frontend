@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "check:api": "node scripts/api-check.mjs .",
     "check:adapters": "node scripts/adapters-check.mjs .",
-    "check": "npm run check:api && npm run check:adapters",
+    "check:stub": "node scripts/stub-check.mjs .",
+    "check": "npm run check:api && npm run check:adapters && npm run check:stub",
+    "stub": "node stub/server.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
