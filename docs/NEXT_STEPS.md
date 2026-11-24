@@ -8,7 +8,7 @@ Ranked easiest → hardest. Status key: `[ ]` to do · `[x]` done.
 | 2 | [x] | Add a `Dockerfile` (Node build, then nginx), `.dockerignore`, and an nginx SPA config. **Written, not yet build-tested** (Docker isn't installed on Joe's machine) | 1–2 h | nothing |
 | 3 | [x] | Add `docker-compose.yml` with the frontend service and placeholders for backend and Fabric. **YAML validated, not yet run** | 1 h | #2 |
 | 4 | [x] | Clone the team's backend repo into `trace-backend/` (next to `trace-frontend/`) and compare its API with `docs/API_CONTRACT_V1.md`. **Done** — see `docs/BACKEND_COMPARISON.md` (backend has chaincode only; no FastAPI code pushed yet) | 1–2 h | friends' repo |
-| 5 | [ ] | Fix the 6 lint warnings by moving data loading into a small `useAsync` hook | 2–3 h | nothing |
+| 5 | [x] | Fix the 6 lint warnings by moving data loading into a small `useAsyncState` hook. **Done** — `npm run lint` is now 0 warnings, and the `no-undef` rule is enabled (it would have caught a missing-import bug found during this work) | 2–3 h | nothing |
 | 6 | [x] | Build the contract stub server (plan step I-2) so `VITE_API_MODE=http` can be tested without the real backend. **Done** — see `stub/README.md`; `npm run stub`, `npm run check:stub` (118 assertions) | 4–6 h | nothing |
 | 7 | [ ] | Fix the UI/contract mismatches found by running the real UI against the stub (list below), plus the new status labels from `docs/INTEGRATION_PLAN.md` §5 | 3–4 h | #6 ✔ |
 | 8 | [ ] | Wire auth, users and cases to the real FastAPI (plan steps I-3, I-4) | 1–2 days | Mathew's backend |

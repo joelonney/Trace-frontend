@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, CheckCircle2, XCircle, PlayCircle, FileSearch } from 'lucide-react'
 import { getEvidenceById } from '../../api/evidence'
@@ -13,6 +13,9 @@ import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { formatDateTime } from '../../utils/formatters'
 import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
+import { useAsyncState } from '../../hooks/useAsyncState'
+
+const LOADING = { status: 'loading' }
 
 const SOURCE_COPY = {
   SYNTHETIC_DEMO: {
@@ -42,7 +45,6 @@ export const VerificationView = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const fileRef = useRef(null)
-  const [state, setState] = useState({ status: 'loading' })
   const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState(null)
 
@@ -55,22 +57,14 @@ export const VerificationView = () => {
       return { status: err.status === 403 ? 'denied' : 'error' }
     }
   }, [evidenceId])
-
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading' })
-    load().then((s) => !cancelled && setState(s))
-    return () => {
-      cancelled = true
-    }
-  }, [load])
+  const { state, setState } = useAsyncState(load, LOADING)
 
   const run = async (file) => {
     setRunError(null)
     setIsRunning(true)
     try {
       const record = await runVerification(evidenceId, file)
-      setState((s) => ({ ...s, record }))
+      setState({ ...state, record })
     } catch (err) {
       setRunError(err.message)
     } finally {

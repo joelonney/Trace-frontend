@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
 import { getCaseById, updateCase, registerCaseDocument, removeCaseDocument } from '../../api/cases'
@@ -21,6 +21,9 @@ import { CASE_STATUS, CASE_PRIORITY } from '../../constants/cases'
 import { EvidenceTable } from '../../components/evidence/EvidenceTable'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { formatDate, formatDateTime } from '../../utils/formatters'
+import { useAsyncState } from '../../hooks/useAsyncState'
+
+const LOADING = { status: 'loading', data: null }
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -136,7 +139,6 @@ export const CaseDetails = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const { user } = useAuth()
-  const [state, setState] = useState({ status: 'loading', data: null })
   const [editOpen, setEditOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
   const [actionError, setActionError] = useState(null)
@@ -158,18 +160,7 @@ export const CaseDetails = () => {
     }
   }, [caseId])
 
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading', data: null })
-    load().then((s) => {
-      if (!cancelled) setState(s)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [load])
-
-  const refresh = () => load().then(setState)
+  const { state, refresh } = useAsyncState(load, LOADING)
 
   const timelineItems = useMemo(() => {
     if (!state.data) return []

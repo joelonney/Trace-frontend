@@ -1,7 +1,6 @@
-import { createContext, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
-
-export const AuthContext = createContext(null)
+import { AuthContext } from './authContextValue'
 
 export const AuthProvider = ({ children }) => {
   // Mock session restore: sessionStorage holds only the signed-in user's id (cleared when the tab

@@ -17,6 +17,9 @@ import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
+import { useAsyncState } from '../../hooks/useAsyncState'
+
+const LOADING = { status: 'loading' }
 
 const TransferForm = ({ evidenceId, onDone, onCancel }) => {
   const [recipients, setRecipients] = useState(null)
@@ -83,7 +86,6 @@ export const EvidenceDetails = () => {
   const { evidenceId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [state, setState] = useState({ status: 'loading' })
   const [isTransferOpen, setIsTransferOpen] = useState(false)
   const [notice, setNotice] = useState(null)
 
@@ -100,15 +102,7 @@ export const EvidenceDetails = () => {
       return { status: err.status === 403 ? 'denied' : 'error' }
     }
   }, [evidenceId, user])
-
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading' })
-    load().then((s) => !cancelled && setState(s))
-    return () => {
-      cancelled = true
-    }
-  }, [load])
+  const { state, refresh } = useAsyncState(load, LOADING)
 
   if (state.status === 'loading') return <LoadingState label="Loading evidence…" />
   if (state.status === 'denied') {
@@ -186,7 +180,7 @@ export const EvidenceDetails = () => {
             onDone={() => {
               setIsTransferOpen(false)
               setNotice('Custody transfer simulated. A new event was added at the bottom of Custody History (no blockchain transaction was made).')
-              load().then(setState)
+              refresh()
             }}
           />
         )}

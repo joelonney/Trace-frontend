@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { getEvidenceById } from '../../api/evidence'
@@ -9,29 +9,24 @@ import { LoadingState } from '../../components/common/LoadingState'
 import { EmptyState } from '../../components/common/EmptyState'
 import { AccessDenied } from '../AccessDenied/AccessDenied'
 import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
+import { useAsyncState } from '../../hooks/useAsyncState'
+
+const LOADING = { status: 'loading', evidenceItem: null, events: [] }
 
 export const CustodyView = () => {
   const { evidenceId } = useParams()
   const navigate = useNavigate()
-  const [state, setState] = useState({ status: 'loading', evidenceItem: null, events: [] })
 
-  useEffect(() => {
-    let cancelled = false
-    setState({ status: 'loading', evidenceItem: null, events: [] })
-
-    getEvidenceById(evidenceId)
-      .then(async (evidenceItem) => {
-        const events = await getCustodyEvents(evidenceId)
-        if (!cancelled) setState({ status: 'ready', evidenceItem, events })
-      })
-      .catch((err) => {
-        if (!cancelled) setState({ status: err.status === 403 ? 'denied' : 'error', evidenceItem: null, events: [] })
-      })
-
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    try {
+      const evidenceItem = await getEvidenceById(evidenceId)
+      const events = await getCustodyEvents(evidenceId)
+      return { status: 'ready', evidenceItem, events }
+    } catch (err) {
+      return { status: err.status === 403 ? 'denied' : 'error', evidenceItem: null, events: [] }
     }
   }, [evidenceId])
+  const { state } = useAsyncState(load, LOADING)
 
   if (state.status === 'loading') {
     return <LoadingState label="Loading chain of custody…" />
