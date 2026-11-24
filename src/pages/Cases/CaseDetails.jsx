@@ -23,6 +23,7 @@ import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
 import { formatDate, formatDateTime } from '../../utils/formatters'
 import { useAsyncState } from '../../hooks/useAsyncState'
 import { codeOf, named, statusOf } from '../../utils/ids'
+import { useMock } from '../../api/mode'
 
 const LOADING = { status: 'loading', data: null }
 
@@ -310,7 +311,7 @@ export const CaseDetails = () => {
                     <p className="text-sm font-medium text-slate-800 truncate">{d.title}</p>
                     <p className="text-xs text-slate-500">
                       {d.added_by} · {formatDateTime(d.added_at)}
-                      {d.note ? ` · ${d.note}` : ''} · metadata only (mock)
+                      {d.note ? ` · ${d.note}` : ''} · {useMock ? 'metadata only (mock)' : 'metadata only'}
                     </p>
                   </div>
                   {hasPermission(user, P.DOCUMENTS_MANAGE) && (
@@ -407,9 +408,9 @@ export const CaseDetails = () => {
       {activeTab === 'overview' && (
         <div className="mt-4">
           <Alert variant="info">
-            Case data shown here is synthetic and served from local mock data. Documents and Reports
-            reflect the mocked evidence/report records above — real report generation is not yet
-            implemented.
+            {useMock
+              ? 'Case data shown here is synthetic and served from local mock data. Documents and Reports reflect the mocked evidence/report records above — real report generation is not yet implemented.'
+              : 'Documents are metadata only (no file contents). Reports are draft records — document generation is not yet implemented.'}
           </Alert>
         </div>
       )}

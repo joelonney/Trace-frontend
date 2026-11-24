@@ -12,6 +12,8 @@ import { EvidenceUploadForm } from '../../components/evidence/EvidenceUploadForm
 import { useAuth } from '../../hooks/useAuth'
 import { useAsyncState } from '../../hooks/useAsyncState'
 import { hasPermission, P } from '../../utils/permissions'
+import { useMock } from '../../api/mode'
+import { codeOf } from '../../utils/ids'
 
 const LOADING = { status: 'loading', items: [], cases: [] }
 
@@ -61,12 +63,20 @@ export const EvidenceList = () => {
 
       {uploadSuccess && (
         <div className="mb-4">
-          <Alert variant="success" title="Evidence registered (mock environment)">
-            {uploadSuccess.filename} was registered as {uploadSuccess.id} in the in-memory mock data.
-            Its SHA-256 was calculated locally in your browser; the file was not uploaded, stored or
-            recorded on a blockchain, and this record will be lost on page reload. Integrity status is
-            pending verification.
-          </Alert>
+          {useMock ? (
+            <Alert variant="success" title="Evidence registered (mock environment)">
+              {uploadSuccess.filename} was registered as {codeOf(uploadSuccess)} in the in-memory mock data.
+              Its SHA-256 was calculated locally in your browser; the file was not uploaded, stored or
+              recorded on a blockchain, and this record will be lost on page reload. Integrity status is
+              pending verification.
+            </Alert>
+          ) : (
+            <Alert variant="success" title="Evidence registered">
+              {uploadSuccess.filename} was registered as {codeOf(uploadSuccess)}. Its SHA-256 was
+              calculated by the backend. Ledger recording:{' '}
+              {(uploadSuccess.ledger?.status ?? 'not submitted').toLowerCase().replace('_', ' ')}.
+            </Alert>
+          )}
         </div>
       )}
 

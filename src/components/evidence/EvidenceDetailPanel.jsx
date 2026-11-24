@@ -19,9 +19,32 @@ const Tag = ({ children }) => (
   </span>
 )
 
+// Where the hash came from decides how much it can be trusted — never call a value "verified"
+// just because it is displayed.
+const hashTag = (source) =>
+  source === 'LOCAL_CALCULATED'
+    ? 'Calculated locally in browser · not blockchain-recorded'
+    : source === 'BACKEND'
+      ? 'Calculated by backend'
+      : 'Synthetic demo value'
+
+// Only a RECORDED entry counts as written to a ledger, and the mock ledger is said to be a mock.
+const ledgerLabel = (ledger) => {
+  const mock = ledger.network === 'MOCK_LEDGER'
+  switch (ledger.status) {
+    case 'RECORDED':
+      return mock ? 'Recorded on the mock ledger (not a real blockchain)' : `Recorded on ${ledger.network}`
+    case 'PENDING':
+      return 'Pending — not yet recorded on the ledger'
+    case 'FAILED':
+      return 'Failed — not recorded on the ledger'
+    default:
+      return 'Not submitted to the ledger'
+  }
+}
+
 export const EvidenceDetailPanel = ({ evidenceItem, relatedCase }) => {
   const nameOf = useUserDirectory()
-  const isLocal = evidenceItem.hash_source === 'LOCAL_CALCULATED'
 
   return (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -50,15 +73,32 @@ export const EvidenceDetailPanel = ({ evidenceItem, relatedCase }) => {
       <div className="sm:col-span-2">
         <Field label="SHA-256 Hash" mono>
           {evidenceItem.sha256}
-          <Tag>{isLocal ? 'Calculated locally in browser · not blockchain-recorded' : 'Synthetic demo value'}</Tag>
+          <Tag>{hashTag(evidenceItem.hash_source)}</Tag>
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <Field label="Storage Reference (CID)" mono>
-          {evidenceItem.cid ?? 'None — file was not stored anywhere'}
-          {evidenceItem.cid && <Tag>Synthetic placeholder</Tag>}
-        </Field>
+        {evidenceItem.storage ? (
+          <Field label={`Storage Reference (${evidenceItem.storage.provider})`} mono>
+            {evidenceItem.storage.reference}
+            {evidenceItem.storage.encrypted_at_rest && <Tag>Encrypted at rest</Tag>}
+          </Field>
+        ) : (
+          <Field label="Storage Reference (CID)" mono>
+            {evidenceItem.cid ?? 'None — file was not stored anywhere'}
+            {evidenceItem.cid && <Tag>Synthetic placeholder</Tag>}
+          </Field>
+        )}
       </div>
+      {evidenceItem.ledger && (
+        <div className="sm:col-span-2">
+          <Field label="Ledger">
+            {ledgerLabel(evidenceItem.ledger)}
+            {evidenceItem.ledger.status === 'RECORDED' && evidenceItem.ledger.tx_ref && (
+              <span className="block mt-0.5 font-mono text-xs text-slate-500">tx {evidenceItem.ledger.tx_ref}</span>
+            )}
+          </Field>
+        </div>
+      )}
 
       <div className="sm:col-span-2">
         <Field label="Description">{evidenceItem.description}</Field>
