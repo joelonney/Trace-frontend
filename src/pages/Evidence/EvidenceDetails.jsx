@@ -1,0 +1,196 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { ChevronLeft, ShieldCheck, ArrowRightLeft } from 'lucide-react'
+import { getEvidenceById } from '../../api/evidence'
+import { getCaseById } from '../../api/cases'
+import { getCustodyEvents, transferCustody, getTransferRecipients } from '../../api/custody'
+import { getAiAnalysis } from '../../api/ai'
+import { PageHeader } from '../../components/common/PageHeader'
+import { Card } from '../../components/common/Card'
+import { Button } from '../../components/common/Button'
+import { Modal } from '../../components/common/Modal'
+import { Alert } from '../../components/common/Alert'
+import { LoadingState } from '../../components/common/LoadingState'
+import { EmptyState } from '../../components/common/EmptyState'
+import { EvidenceDetailPanel } from '../../components/evidence/EvidenceDetailPanel'
+import { CustodyTimeline } from '../../components/custody/CustodyTimeline'
+import { AccessDenied } from '../AccessDenied/AccessDenied'
+import { useAuth } from '../../hooks/useAuth'
+import { hasPermission, P } from '../../utils/permissions'
+
+const TransferForm = ({ evidenceId, onDone, onCancel }) => {
+  const [recipients, setRecipients] = useState(null)
+  const [toUserId, setToUserId] = useState('')
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    getTransferRecipients(evidenceId).then((r) => {
+      setRecipients(r)
+      setToUserId(r[0]?.id ?? '')
+    })
+  }, [evidenceId])
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setIsSaving(true)
+    try {
+      await transferCustody({ evidenceId, toUserId, reason })
+      onDone()
+    } catch (err) {
+      setError(err.message)
+      setIsSaving(false)
+    }
+  }
+
+  if (!recipients) return <LoadingState label="Loading recipients…" />
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <Alert variant="info" title="Simulated transfer">
+        Updates the in-memory custodian and appends a custody event. No blockchain transaction is made.
+      </Alert>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {recipients.length === 0 ? (
+        <Alert variant="warning">No eligible recipients are assigned to this case.</Alert>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="t-to" className="block text-xs font-medium text-slate-600 mb-1">Transfer to</label>
+            <select id="t-to" value={toUserId} onChange={(e) => setToUserId(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+              {recipients.map((r) => (
+                <option key={r.id} value={r.id}>{r.name} — {r.organization}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="t-reason" className="block text-xs font-medium text-slate-600 mb-1">Reason</label>
+            <textarea id="t-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+        <Button type="submit" disabled={isSaving || recipients.length === 0}>{isSaving ? 'Transferring…' : 'Simulate transfer'}</Button>
+      </div>
+    </form>
+  )
+}
+
+export const EvidenceDetails = () => {
+  const { evidenceId } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [state, setState] = useState({ status: 'loading' })
+  const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [notice, setNotice] = useState(null)
+
+  const load = useCallback(async () => {
+    try {
+      const evidenceItem = await getEvidenceById(evidenceId)
+      const [custodyEvents, relatedCase, ai] = await Promise.all([
+        getCustodyEvents(evidenceId),
+        getCaseById(evidenceItem.case_id).catch(() => null),
+        hasPermission(user, P.AI_VIEW) ? getAiAnalysis(evidenceId).catch(() => null) : null,
+      ])
+      return { status: 'ready', evidenceItem, custodyEvents, relatedCase, ai }
+    } catch (err) {
+      return { status: err.status === 403 ? 'denied' : 'error' }
+    }
+  }, [evidenceId, user])
+
+  useEffect(() => {
+    let cancelled = false
+    setState({ status: 'loading' })
+    load().then((s) => !cancelled && setState(s))
+    return () => {
+      cancelled = true
+    }
+  }, [load])
+
+  if (state.status === 'loading') return <LoadingState label="Loading evidence…" />
+  if (state.status === 'denied') {
+    return <AccessDenied message="You are not authorized to access this evidence item." />
+  }
+  if (state.status === 'error') return <EmptyState message={`Evidence ${evidenceId} could not be found.`} />
+
+  const { evidenceItem, custodyEvents, relatedCase, ai } = state
+  const canTransfer = hasPermission(user, P.CUSTODY_TRANSFER)
+
+  return (
+    <div>
+      <button
+        onClick={() => navigate('/evidence')}
+        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 mb-3"
+      >
+        <ChevronLeft size={14} /> Back to Evidence
+      </button>
+
+      <PageHeader
+        title={evidenceItem.filename}
+        description={evidenceItem.id}
+        action={
+          <div className="flex gap-2">
+            {canTransfer && (
+              <Button variant="secondary" icon={ArrowRightLeft} onClick={() => setIsTransferOpen(true)}>
+                Transfer Custody
+              </Button>
+            )}
+            <Link to={`/verification/${evidenceItem.id}`}>
+              <Button variant="secondary" icon={ShieldCheck}>View Verification</Button>
+            </Link>
+          </div>
+        }
+      />
+
+      {notice && (
+        <div className="mb-4">
+          <Alert variant="success">{notice}</Alert>
+        </div>
+      )}
+
+      {evidenceItem.is_mock_registration && (
+        <div className="mb-4">
+          <Alert variant="warning" title="Mock registration">
+            Registered in this browser session only. The file was not stored and nothing was written to
+            a blockchain.
+          </Alert>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card title="Evidence Information" className="lg:col-span-2">
+          <EvidenceDetailPanel evidenceItem={evidenceItem} relatedCase={relatedCase} />
+        </Card>
+
+        <Card title="Custody History" description="Chain of custody for this evidence item." className="lg:col-span-1">
+          <CustodyTimeline events={custodyEvents} />
+        </Card>
+      </div>
+
+      {ai && (
+        <div className="mt-4">
+          <Card title="AI Analysis (placeholder)" description={ai.model}>
+            <p className="text-sm text-slate-600">{ai.summary}</p>
+          </Card>
+        </div>
+      )}
+
+      <Modal title="Transfer custody (simulated)" isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)}>
+        {isTransferOpen && (
+          <TransferForm
+            evidenceId={evidenceItem.id}
+            onCancel={() => setIsTransferOpen(false)}
+            onDone={() => {
+              setIsTransferOpen(false)
+              setNotice('Custody transfer simulated. A new event was added at the bottom of Custody History (no blockchain transaction was made).')
+              load().then(setState)
+            }}
+          />
+        )}
+      </Modal>
+    </div>
+  )
+}
