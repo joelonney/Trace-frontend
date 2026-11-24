@@ -10,12 +10,12 @@ Ranked easiest → hardest. Status key: `[ ]` to do · `[x]` done.
 | 4 | [x] | Clone the team's backend repo into `trace-backend/` (next to `trace-frontend/`) and compare its API with `docs/API_CONTRACT_V1.md`. **Done** — see `docs/BACKEND_COMPARISON.md` (backend has chaincode only; no FastAPI code pushed yet) | 1–2 h | friends' repo |
 | 5 | [x] | Fix the 6 lint warnings by moving data loading into a small `useAsyncState` hook. **Done** — `npm run lint` is now 0 warnings, and the `no-undef` rule is enabled (it would have caught a missing-import bug found during this work) | 2–3 h | nothing |
 | 6 | [x] | Build the contract stub server (plan step I-2) so `VITE_API_MODE=http` can be tested without the real backend. **Done** — see `stub/README.md`; `npm run stub`, `npm run check:stub` (118 assertions) | 4–6 h | nothing |
-| 7 | [ ] | Fix the UI/contract mismatches found by running the real UI against the stub (list below), plus the new status labels from `docs/INTEGRATION_PLAN.md` §5 | 3–4 h | #6 ✔ |
+| 7 | [x] | Fix the UI/contract mismatches found by running the real UI against the stub (all six fixed — see below). Verified in a real browser against the stub, and mock mode re-verified (50/50 browser checks, 26 pages × 4 roles clean) | 3–4 h | #6 ✔ |
 | 8 | [ ] | Wire auth, users and cases to the real FastAPI (plan steps I-3, I-4) | 1–2 days | Mathew's backend |
 | 9 | [ ] | Wire evidence upload/download, custody, verification, ledger banner and polling (plan steps I-4 to I-6) | 2–4 days | backend + Aadi's chaincode |
 | 10 | [ ] | Stretch goals: DID login and client-side AES-256 encryption | 1+ week | backend |
 
-## Findings from running the real UI against the stub (feeds task #7)
+## Findings from running the real UI against the stub (all fixed in task #7)
 
 Tested 2026-11-24 in a real browser, `VITE_API_MODE=http` → stub. Login, cases, evidence, upload,
 custody transfer, verification, reports, user management and audit all work end to end. What's
