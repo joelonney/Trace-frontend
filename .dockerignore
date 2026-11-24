@@ -1,0 +1,26 @@
+# Keep the build context small and never ship secrets or local state into an image.
+node_modules
+dist
+.git
+.gitignore
+.vscode
+.idea
+
+# Local environment files (may contain secrets or machine-specific values)
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and OS noise
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Not needed to build the app
+docs
+scripts
+stub
+Dockerfile
+docker-compose*.yml

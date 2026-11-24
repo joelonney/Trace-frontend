@@ -1,0 +1,65 @@
+# TRACE — local stack.
+#
+#   docker compose up --build        # frontend only (works today, mock-data mode)
+#   open http://localhost:3000
+#
+# Switch the frontend to a real backend (values are baked in at BUILD time, so rebuild):
+#   VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:8000/api/v1 docker compose up --build
+#
+# Layout this file assumes once the team's code is cloned next to the frontend:
+#   TRACE Final Year Project/
+#     trace-frontend/   <- this repo (this file lives here)
+#     trace-backend/    <- friends' FastAPI repo (clone it here)
+#     trace-fabric/     <- Hyperledger Fabric network / chaincode (when it exists)
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_MODE: ${VITE_API_MODE:-mock}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+    image: trace-frontend:local
+    container_name: trace-frontend
+    ports:
+      - "3000:8080"
+    restart: unless-stopped
+    # Wait for the API before starting once it is enabled below:
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+  # ---------------------------------------------------------------------------------------------
+  # PLACEHOLDER — FastAPI backend (Mathew). Not enabled: the backend repo and its Dockerfile are
+  # not in this project yet. When they are, uncomment, then fix `context`, the port and the
+  # healthcheck path to match what the backend actually provides.
+  #
+  # backend:
+  #   build:
+  #     context: ../trace-backend
+  #   container_name: trace-backend
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     # Must allow the frontend origin (CORS), e.g. http://localhost:3000
+  #     CORS_ORIGINS: http://localhost:3000
+  #     # FABRIC_GATEWAY_URL: http://fabric-gateway:7051
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+  #     interval: 15s
+  #     timeout: 3s
+  #     retries: 5
+  #   volumes:
+  #     - backend-data:/data        # SQLite file and encrypted evidence storage
+  #
+  # PLACEHOLDER — Hyperledger Fabric network (Aadi). Fabric's test-network is normally started
+  # with its own scripts rather than a single compose service; decide with Aadi whether to wrap it
+  # here or run it separately and just point the backend at it.
+  #
+  # fabric:
+  #   build:
+  #     context: ../trace-fabric
+  # ---------------------------------------------------------------------------------------------
+
+# volumes:
+#   backend-data:
