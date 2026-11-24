@@ -11,6 +11,7 @@ import { RecentActivityList } from '../../components/dashboard/RecentActivityLis
 import { VerificationSummary } from '../../components/dashboard/VerificationSummary'
 import { formatDate, formatDateTime, titleCase } from '../../utils/formatters'
 import { codeOf, caseCodeOf } from '../../utils/ids'
+import { useMock } from '../../api/mode'
 
 export const Dashboard = () => {
   const [data, setData] = useState(null)
@@ -73,10 +74,11 @@ export const Dashboard = () => {
         <StatCard label="Active Cases" value={activeCases.length} icon={FolderKanban} />
         <StatCard label="Total Evidence Items" value={evidenceItems.length} icon={Fingerprint} />
         <StatCard
-          label="Pending Access Requests"
+          label={useMock ? 'Pending Access Requests' : 'Pending custody transfers'}
           value={pendingRequests.length}
           icon={UserCheck}
           tone={pendingRequests.length > 0 ? 'warning' : 'default'}
+          to={useMock ? undefined : '/transfers'}
         />
         <StatCard
           label="Verified Evidence"

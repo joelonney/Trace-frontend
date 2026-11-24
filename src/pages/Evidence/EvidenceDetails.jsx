@@ -19,8 +19,18 @@ import { useAuth } from '../../hooks/useAuth'
 import { hasPermission, P } from '../../utils/permissions'
 import { useAsyncState } from '../../hooks/useAsyncState'
 import { codeOf, named, statusOf } from '../../utils/ids'
+import { errorMessage } from '../../utils/errors'
+import { useMock } from '../../api/mode'
 
 const LOADING = { status: 'loading' }
+
+// Transfers are two-step against the API: an offer stays pending until the recipient accepts or
+// rejects. The newest transfer-related event tells us where things stand (events are oldest first).
+const TRANSFER_EVENTS = ['CUSTODY_TRANSFER_REQUESTED', 'CUSTODY_TRANSFERRED', 'CUSTODY_TRANSFER_REJECTED']
+const pendingTransferOf = (events) => {
+  const latest = [...events].reverse().find((e) => TRANSFER_EVENTS.includes(e.event_type))
+  return latest && latest.event_type === 'CUSTODY_TRANSFER_REQUESTED' && latest.status === 'PENDING' ? latest : null
+}
 
 const TransferForm = ({ evidenceId, onDone, onCancel }) => {
   const [recipients, setRecipients] = useState(null)
@@ -41,10 +51,10 @@ const TransferForm = ({ evidenceId, onDone, onCancel }) => {
     setError(null)
     setIsSaving(true)
     try {
-      await transferCustody({ evidenceId, toUserId, reason })
-      onDone()
+      const event = await transferCustody({ evidenceId, toUserId, reason })
+      onDone(event)
     } catch (err) {
-      setError(err.message)
+      setError(errorMessage(err))
       setIsSaving(false)
     }
   }
@@ -53,9 +63,16 @@ const TransferForm = ({ evidenceId, onDone, onCancel }) => {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Alert variant="info" title="Simulated transfer">
-        Updates the in-memory custodian and appends a custody event. No blockchain transaction is made.
-      </Alert>
+      {useMock ? (
+        <Alert variant="info" title="Simulated transfer">
+          Updates the in-memory custodian and appends a custody event. No blockchain transaction is made.
+        </Alert>
+      ) : (
+        <Alert variant="info" title="Custody transfer">
+          Offers custody to the selected user. If the backend requires approval, custody changes only
+          when they accept.
+        </Alert>
+      )}
       {error && <Alert variant="danger">{error}</Alert>}
       {recipients.length === 0 ? (
         <Alert variant="warning">No eligible recipients are assigned to this case.</Alert>
@@ -77,7 +94,7 @@ const TransferForm = ({ evidenceId, onDone, onCancel }) => {
       )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-        <Button type="submit" disabled={isSaving || recipients.length === 0}>{isSaving ? 'Transferring…' : 'Simulate transfer'}</Button>
+        <Button type="submit" disabled={isSaving || recipients.length === 0}>{isSaving ? 'Transferring…' : useMock ? 'Simulate transfer' : 'Transfer custody'}</Button>
       </div>
     </form>
   )
@@ -117,7 +134,8 @@ export const EvidenceDetails = () => {
   }
 
   const { evidenceItem, custodyEvents, relatedCase, ai } = state
-  const canTransfer = hasPermission(user, P.CUSTODY_TRANSFER)
+  const pendingTransfer = pendingTransferOf(custodyEvents)
+  const canTransfer = hasPermission(user, P.CUSTODY_TRANSFER) && !pendingTransfer
 
   return (
     <div>
@@ -151,6 +169,21 @@ export const EvidenceDetails = () => {
         </div>
       )}
 
+      {pendingTransfer && (
+        <div className="mb-4">
+          <Alert variant="warning" title="Custody transfer pending">
+            Offered to {pendingTransfer.to_user?.name ?? 'the recipient'}
+            {pendingTransfer.actor ? ` by ${pendingTransfer.actor}` : ''}. Custody changes only when they accept.
+            {pendingTransfer.to_user?.id === user.id && (
+              <>
+                {' '}
+                <Link to="/transfers" className="font-medium underline">Review it in Incoming transfers</Link>.
+              </>
+            )}
+          </Alert>
+        </div>
+      )}
+
       {evidenceItem.is_mock_registration && (
         <div className="mb-4">
           <Alert variant="warning" title="Mock registration">
@@ -178,14 +211,20 @@ export const EvidenceDetails = () => {
         </div>
       )}
 
-      <Modal title="Transfer custody (simulated)" isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)}>
+      <Modal title={useMock ? 'Transfer custody (simulated)' : 'Transfer custody'} isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)}>
         {isTransferOpen && (
           <TransferForm
             evidenceId={evidenceItem.id}
             onCancel={() => setIsTransferOpen(false)}
-            onDone={() => {
+            onDone={(event) => {
               setIsTransferOpen(false)
-              setNotice('Custody transfer simulated. A new event was added at the bottom of Custody History (no blockchain transaction was made).')
+              setNotice(
+                event?.event_type === 'CUSTODY_TRANSFER_REQUESTED'
+                  ? `Transfer requested. Custody changes when ${event.to_user?.name ?? 'the recipient'} accepts.`
+                  : useMock
+                    ? 'Custody transfer simulated. A new event was added at the bottom of Custody History (no blockchain transaction was made).'
+                    : 'Custody transferred. A new event was added at the bottom of Custody History.',
+              )
               refresh()
             }}
           />

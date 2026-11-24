@@ -108,6 +108,23 @@ try {
   const an = A.toAnalysis({ id: 'j7', evidence_id: 'b04d', status: 'COMPLETED', is_draft: true, service: { model: 'm' }, result: { summary: 's' } })
   ok(an.synthetic === false && an.is_draft === true && an.model === 'm' && an.summary === 's', 'analysis mapping keeps draft flag')
 
+  const tr = A.toTransfer({ id: 't1', evidence_id: 'b04d', status: 'PENDING', reason: 'lab', from_user: ref('u3', 'Daniel Mathew', 'Lab'), to_user: ref('u1', 'Alex Morgan', 'Admin'), requested_at: '2026-06-03T08:00:00Z', extra: 'ignored' })
+  eq(tr, { id: 't1', evidence_id: 'b04d', status: 'PENDING', reason: 'lab', from_user: ref('u3', 'Daniel Mathew', 'Lab'), to_user: ref('u1', 'Alex Morgan', 'Admin'), requested_at: '2026-06-03T08:00:00Z' }, 'transfer mapping')
+  const trBare = A.toTransfer({ id: 't2', evidence_id: 'e', status: 'REJECTED' })
+  ok(trBare.reason === '' && trBare.from_user === null && trBare.to_user === null && trBare.requested_at === null, 'transfer mapping tolerates missing optional fields')
+
+  // Readable codes: display_id wins, mock data (id only) falls back to id
+  const ids = await server.ssrLoadModule('/src/utils/ids.js')
+  eq([ids.codeOf({ id: 'uuid', display_id: 'TRC-1' }), ids.codeOf({ id: 'TRC-2' }), ids.codeOf(null)], ['TRC-1', 'TRC-2', ''], 'codeOf prefers display_id and falls back to id')
+  eq(ids.caseCodeOf({ case_id: 'uuid', case_display_id: 'TRC-1' }), 'TRC-1', 'caseCodeOf prefers case_display_id')
+  eq(ids.caseCodeOf({ case_id: 'TRC-9' }), 'TRC-9', 'caseCodeOf falls back to case_id (mock data)')
+  ok(ids.isUuid('b6df8190-b6d0-5c54-a651-10d3cf38e12b') && !ids.isUuid('TRC-2026-0114'), 'isUuid tells UUIDs from readable codes')
+  eq([ids.statusOf({ status: 403 }), ids.statusOf({ status: 404 }), ids.statusOf({ status: 500 }), ids.statusOf({ status: 0 })], ['denied', 'notfound', 'error', 'error'], 'statusOf: 403 denied, 404 not found, anything else is a load error')
+  eq([ids.named('Case', 'TRC-1'), ids.named('Evidence', 'b6df8190-b6d0-5c54-a651-10d3cf38e12b')], ['Case TRC-1', 'This evidence'], 'named() never prints a raw UUID')
+  const errs = await server.ssrLoadModule('/src/utils/errors.js')
+  eq(errs.errorMessage({ message: 'Some fields are invalid.', details: [{ field: 'a', message: 'A is bad.' }, { field: 'b', message: 'B is bad.' }] }), 'A is bad. B is bad.', 'errorMessage joins 422 field messages')
+  eq([errs.errorMessage({ message: 'Boom' }), errs.errorMessage({}, 'Fallback')], ['Boom', 'Fallback'], 'errorMessage falls back to message, then default')
+
   console.log('\n--- status badge tones for contract enums')
   const src = await import('node:fs').then((fs) => fs.readFileSync(`${root}/src/components/common/StatusBadge.jsx`, 'utf8'))
   for (const s of ['REGISTERED', 'PENDING_LEDGER', 'RECORDED', 'VERIFIED', 'MISMATCH', 'LEDGER_UNAVAILABLE', 'CONFIRMED', 'SUBMITTED', 'FAILED', 'REJECTED', 'INACTIVE']) {

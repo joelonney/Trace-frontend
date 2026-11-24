@@ -59,6 +59,18 @@ export const getPendingAccessRequests = async () => {
   )
 }
 
+// Mock transfers are immediate (no approval step), so nothing is ever waiting for acceptance.
+export const getIncomingTransfers = async () => {
+  authorize(P.CUSTODY_VIEW)
+  return mockDelay([], 150)
+}
+export const acceptTransfer = async () => {
+  throw new ApiError('Transfer approval is not available in mock mode (transfers are immediate).', 501)
+}
+export const rejectTransfer = async () => {
+  throw new ApiError('Transfer approval is not available in mock mode (transfers are immediate).', 501)
+}
+
 // Simulated custody transfer. No chaincode is invoked: the custodian changes in memory and a
 // clearly-labelled event is appended. A real implementation would be an on-chain transaction.
 export const transferCustody = async ({ evidenceId, toUserId, reason }) => {
